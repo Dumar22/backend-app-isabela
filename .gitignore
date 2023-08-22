@@ -1,0 +1,9 @@
+.env
+node_modules/
+logo/
+cache/
+fonts/
+uploads/
+*.log
+*.bak
+.package-lock.json
