@@ -40,7 +40,8 @@ const createMeter = async (req, res) => {
  await check('code').notEmpty().withMessage('El Campo Codigo  no puede ir vacio - código').run(req)
  await check('unity').notEmpty().withMessage('El Campo unidad no puede ir vacio - unidad').run(req) 
  await check('value').notEmpty().withMessage('El Campo valor no puede ir vacio - valor').run(req)
- await check('serial').notEmpty().withMessage('El Campo valor no puede ir vacio - serial').run(req)
+ await check('serial').notEmpty().withMessage('El Campo serial no puede ir vacio - serial').run(req)
+ await check('brand').notEmpty().withMessage('El Campo marca no puede ir vacio - serial').run(req)
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -48,7 +49,7 @@ const createMeter = async (req, res) => {
   }
 
  // Extraer los datos
- const { name, code,unity,quantity = 1 , value, serial, warehouse, } = req.body;
+ const { name, code,unity,quantity = 1 , value, serial, brand, warehouse, } = req.body;
     // Obtener los datos completos del usuario que está logeado utilizando el middleware validateJWT
 
  const user = req.user;
@@ -72,6 +73,7 @@ const createMeter = async (req, res) => {
    unity,   
    value,
    serial,
+   brand,
    total : quantity * value,
    warehouse: user.warehouse,  
    user: user.id,
@@ -101,7 +103,7 @@ const uploadMeters = async (req, res) => {
   
       // Procesar los datos del archivo
       for (let i = 1; i < rows.length; i++) {
-        const [name, code, unity, quantity, value, serial, warehouse] = rows[i];
+        const [name, code, unity, quantity, value, serial,brand, warehouse] = rows[i];
         const existingMaterial = await Meter.findOne({ where: { name: name, serial: serial, warehouse: warehouse } });
         if (existingMaterial) {
           console.log(`El medidor ${name} con número de serie ${serial} ya existe en la bodega.`);
@@ -113,6 +115,7 @@ const uploadMeters = async (req, res) => {
             quantity,
             value,
             serial,
+            brand,
             total: quantity * value,
             warehouse:req.user.warehouse,
             user: req.user.id,
@@ -125,10 +128,10 @@ const uploadMeters = async (req, res) => {
         }
       }
   
-      res.status(200).json({ message: 'Los medidores han sido agregados a la bodega.' });
+      res.status(200).json({ msg: 'Los medidores han sido agregados a la bodega.' });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: 'Ha ocurrido un error al procesar el archivo.' });
+      res.status(500).json({ msg: 'Ha ocurrido un error al procesar el archivo.' });
     }
   };
 
@@ -146,7 +149,7 @@ const putMeter = async( req, res) => {
           
 
           if (body.quantity > 1 || body.quantity <= 0) {
-            return res.status(400).json({ message: 'Error en la cantidad de ingreso' });
+            return res.status(400).json({ msg: 'Error en la cantidad de ingreso' });
          }
          
    // Convertir el nombre a mayúsculas

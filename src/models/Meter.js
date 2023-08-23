@@ -53,6 +53,14 @@ const Meter = db.define('Meter', {
     allowNull: true,
     
   },
+  brand: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      notNull: { msg: 'La marca es obligatorio.' },
+      notEmpty: { msg: 'La marca no puede estar vacío.' },
+    },
+  },
   total: {
     type: DataTypes.FLOAT,
     allowNull: true,
