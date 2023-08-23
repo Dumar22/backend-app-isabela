@@ -69,6 +69,11 @@ const MaterialExitDetail = db.define('MaterialExitDetail', {
     type: DataTypes.FLOAT,
     allowNull: true,
   },
+  obs: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue:''
+  },
   // Otros campos específicos de los detalles de materiales
 },
 { db, modelName: 'materialExitDetail' }

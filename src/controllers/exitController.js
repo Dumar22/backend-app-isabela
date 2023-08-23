@@ -1,7 +1,7 @@
 import { check, validationResult } from 'express-validator'
 
 import ExitMaterial from "../models/ExitMaterials.js";
-import MaterialsExitDetail from "../models/MaterialExitDetails.js";
+import MaterialExitDetail from "../models/MaterialExitDetails.js";
 import Material from "../models/Material.js";
 import Meter from "../models/Meter.js";
 import User from '../models/User.js';
@@ -77,7 +77,7 @@ const getAllExit = async (req, res) => {
 const createExit = async (req, res) => {
     try {
       // Extraer datos de la solicitud
-      const { exitNumber, collaboratorCode, collaboratorName, collaboratorDocument, collaboratorOperation, details } = req.body;
+      const { exitNumber, collaboratorCode, collaboratorName, collaboratorDocument, collaboratorOperation, materialExitDetail } = req.body;
   
       // Validar campos obligatorios
       const validationRules = [
@@ -87,7 +87,7 @@ const createExit = async (req, res) => {
         check('collaboratorName').notEmpty().withMessage('El campo nombre del colaborador es obligatorio.'),
         check('collaboratorDocument').notEmpty().withMessage('El campo documento del colaborador es obligatorio.'),
         check('collaboratorOperation').notEmpty().withMessage('El campo operación del colaborador es obligatorio.'),
-        check('details').isArray({ min: 1 }).withMessage('Debe haber al menos un detalle.')
+        check('materialExitDetail').isArray({ min: 1 }).withMessage('Debe haber al menos un detalle.')
       ];
       await Promise.all(validationRules.map(validation => validation.run(req)));
   
@@ -101,13 +101,13 @@ const createExit = async (req, res) => {
       const existExitNumber = await ExitMaterial.findOne({ where: { exitNumber } });
       if (existExitNumber) {
         return res.status(400).json({
-          msg: `La factura de salida ${exitNumber} ya existe, ingrese una diferente.`
+          msg: `La salida de salida ${exitNumber} ya existe, ingrese una diferente.`
         });
       }
   
       // Verificar si hay suficiente cantidad de materiales y medidores disponibles para dar salida
-      for (let i = 0; i < details.length; i++) {
-        const { name, code, unity, note, quantity, restore, serial, value } = details[i];
+      for (let i = 0; i < materialExitDetail.length; i++) {
+        const { name, code, unity, note, quantity, restore, serial, value } = materialExitDetail[i];
         if (code.startsWith('MED')) {
           // Si el código comienza con "MED", se trata de un medidor
           const existingMeter = await Meter.findOne({ where: { code } });
@@ -145,16 +145,17 @@ const createExit = async (req, res) => {
         collaboratorCode,
         collaboratorName,
         collaboratorDocument,
-        collaboratorOperation
+        collaboratorOperation,
+        createdById: req.user.id
       });
   
       // Agregar los detalles a la factura de salida y actualizar los materiales y medidores correspondientes
-      for (let i = 0; i < details.length; i++) {
-        const { name, code, unity, note, quantity, restore, serial, value } = details[i];
+      for (let i = 0; i < materialExitDetail.length; i++) {
+        const { name, code, unity, note, quantity, restore, serial, value } = materialExitDetail[i];
         const total = quantity * value;
         if (code.startsWith('MED')) {
           // Si el código comienza con "MED", se trata de un medidor
-          await MaterialsExitDetail.create({
+          await MaterialExitDetail.create({
             name,
             code,
             unity,
@@ -172,7 +173,7 @@ const createExit = async (req, res) => {
           );
         } else {
           // Si no comienza con "MED", se trata de un material
-          await MaterialsExitDetail.create({
+          await MaterialExitDetail.create({
             name,
             code,
             unity,
@@ -191,10 +192,10 @@ const createExit = async (req, res) => {
         }
       }
   
-      res.json({ msg: 'Factura de salida creada exitosamente.' });
+      res.json({ msg: 'Salida creada exitosamente.' });
     } catch (error) {
       console.log(error);
-      res.status(500).json({ msg: 'Hubo un error al crear la factura de salida.' });
+      res.status(500).json({ msg: 'Hubo un error al crear la salida.' });
     }
   };
   

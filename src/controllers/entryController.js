@@ -76,7 +76,7 @@ const getAllEntry = async (req, res) => {
 const createEntry = async (req, res) => {
   try {
       // Extraer datos de la solicitud
-    const { entryNumber, origin, providerName, materials } = req.body;
+    const { entryNumber, origin, providerName, materialEntryDetail } = req.body;
      
     // Validar campos obligatorios
     const validationRules = [
@@ -85,7 +85,7 @@ const createEntry = async (req, res) => {
       check('origin').notEmpty().withMessage('El campo origen es obligatorio. - origen'),
       check('providerName').notEmpty().withMessage('El campo nombre del proveedor es obligatorio. - proveedor'),
       check('providerNit').notEmpty().withMessage('El campo NIT del proveedor es obligatorio. - nit'),
-      check('materials').isArray({ min: 1 }).withMessage('Debe haber al menos un material.')
+      check('materialEntryDetail').isArray({ min: 1 }).withMessage('Debe haber al menos un material.')
     ];
     await Promise.all(validationRules.map(validation => validation.run(req)));
 
@@ -113,7 +113,7 @@ const createEntry = async (req, res) => {
         });    
 
    // Crear los detalles de materiales y asociarlos a la entrada
-    for (const materialDetail of materials) {
+    for (const materialDetail of  materialEntryDetail) {
       const { code, name, quantity, unity, serial = '', value, obs } = materialDetail;
 
       // Crear el detalle de material
@@ -152,7 +152,7 @@ const createEntry = async (req, res) => {
     res.status(201).json({ message: 'Entrada de materiales creada exitosamente.' });
    
   } catch (error) {
-    //console.log(error);
+    console.log(error);
     return res.status(500).json({ error: 'No se pudo crear la entrada de materiales.' });
   }
 };
@@ -161,20 +161,18 @@ const createEntry = async (req, res) => {
 const putEntry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { origin, providerName, materials } = req.body;
+    const { origin, providerName, materialEntryDetail } = req.body;
 
     const entry = await Entry.findByPk(id);
 
-    if (!entry) {  //validar si la entrada existe
-      return res.status(404).json({ error: 'Entrada no encontrada o no existe.' });
-    }
 
+   
     await check('date').notEmpty().withMessage('El Campo no puede ir vacio - fecha').run(req)
     await check('entryNumber').notEmpty().withMessage('El Campo no puede ir vacio - numero entrada').run(req)
     await check('origin').notEmpty().withMessage('El Campo no puede ir vacio- origen').run(req)
     await check('providerName').notEmpty().withMessage('El Campo no puede ir vacio - provedor').run(req)
     await check('providerNit').notEmpty().withMessage('El Campo no puede ir vacio - nit').run(req)
-    await check('materials').isArray({ min: 1 }).withMessage('Debe haber al menos un material.').run(req)
+    await check('materialEntryDetail').isArray({ min: 1 }).withMessage('Debe haber al menos un material.').run(req)
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -191,7 +189,7 @@ const putEntry = async (req, res) => {
       });
 
     // Actualizar los detalles de materiales asociados a la entrada
-    for (const materialDetail of materials) {
+    for (const materialDetail of materialEntryDetail) {
         const { id: materialEntryDetailId, code, name, unity, quantity, serial = '', value } = materialDetail;
   
         if (materialEntryDetailId) {
