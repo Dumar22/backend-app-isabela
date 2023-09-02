@@ -12,6 +12,7 @@ router.get('/exit/:id',validateJWT, getExitById)
 router.post('/exit', validateJWT, createExit)
 router.put('/exit/:id', validateJWT, putExit)
 router.delete('/exit/:id', deleteExit)
+router.get('/dowload-exit/:id', ) 
 
 
 

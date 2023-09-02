@@ -1,6 +1,7 @@
 import { check, validationResult } from 'express-validator'
 
 import Entry from "../models/Entry.js";
+import {  generateEntryPDF } from '../middlewares/generateEntryPDF.js';
 import MaterialEntryDetail from "../models/MaterialEntryDetail.js";
 import Material from "../models/Material.js";
 import User from '../models/User.js';
@@ -190,7 +191,7 @@ const putEntry = async (req, res) => {
 
     // Actualizar los detalles de materiales asociados a la entrada
     for (const materialDetail of materialEntryDetail) {
-        const { id: materialEntryDetailId, code, name, unity, quantity, serial = '', value } = materialDetail;
+        const { id: materialEntryDetailId, code, name, unity, quantity, serial = '', value, obs} = materialDetail;
   
         if (materialEntryDetailId) {
           // Si el detalle de material ya existe, actualizarlo
@@ -211,6 +212,7 @@ const putEntry = async (req, res) => {
             quantity,
             serial,
             value,
+            obs,
             total: quantity * value,
           });
   
@@ -295,6 +297,39 @@ const deleteEntry = async (req, res) => {
   }
 };
 
+const dowloadPdf = async (req, res) => {
+  try {
+    // Obtener factura por ID
+    const { id } = req.params;
+   
+    const entry = await Entry.findByPk(id, {
+      include: [{ model: MaterialEntryDetail, as: 'materialEntryDetail' } ]
+    });
+    
+    if (!entry) {
+      return res.status(404).json({ error: 'Entrada no encontrada' });
+    }
+
+    // Generar PDF de factura
+    const result = await generateEntryPDF(entry);
+
+    // Enviar PDF en respuesta
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename=${entry.entryNumber}.pdf`);
+    res.sendFile(result.pdfPath, err => {
+      if (err) return res.status(500).json({error: err}); 
+    });
+    // res.setHeader('Content-Type', 'application/pdf');
+    // res.setHeader('Content-Disposition', `attachment; filename=${invoice.invoiceNumber}.pdf`);
+    // res.send(pdfContent);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al descargar el pdf' });
+  }
+};
+
 
 export {
   createEntry,
@@ -303,5 +338,6 @@ export {
   getEntry,
   getEntryById,
   putEntry,
+  dowloadPdf
 
 }

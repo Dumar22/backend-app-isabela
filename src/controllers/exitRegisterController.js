@@ -114,7 +114,6 @@ const createExit = async (req, res) => {
     // Verificar si hay suficiente cantidad de materiales y medidores disponibles para dar salida
     for (const detail of materialExitDetail) {
       const { code } = detail;
-      console.log(code);
       if (code.startsWith('MED')) {
         const existingMeter = await Meter.findOne({ where: { code } });
         if (!existingMeter) {

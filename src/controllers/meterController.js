@@ -95,18 +95,24 @@ const createMeter = async (req, res) => {
 
 const uploadMeters = async (req, res) => {
     try {
+      const user = req.user;
+    const verifywarehouse = req.user.warehouse;
       const file = req.file;      
       const workbook = XLSX.readFile(file.path);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      const totalRows = rows.length - 1; // Excluimos la fila de encabezado
+    let processedRows = 0;
   
       // Procesar los datos del archivo
       for (let i = 1; i < rows.length; i++) {
-        const [name, code, unity, quantity, value, serial,brand, warehouse] = rows[i];
-        const existingMaterial = await Meter.findOne({ where: { name: name, serial: serial, warehouse: warehouse } });
+        const [name, code, unity, quantity, value, serial, brand, warehouse] = rows[i];
+        const existingMaterial = await Meter.findOne({ where: { name: name, serial: serial, warehouse: verifywarehouse } });
         if (existingMaterial) {
           console.log(`El medidor ${name} con número de serie ${serial} ya existe en la bodega.`);
+          continue;
         } else {
           const data = {
             name: name.toUpperCase(),
@@ -117,18 +123,22 @@ const uploadMeters = async (req, res) => {
             serial,
             brand,
             total: quantity * value,
-            warehouse:req.user.warehouse,
-            user: req.user.id,
+            warehouse: user.warehouse,
+            user: user.id,
             createdAt: new Date(),
             updatedAt: new Date()
           };
+
+          // Emitir progreso
+            processedRows++;  
+
           const provider = new Meter(data);
           await provider.save();
           console.log(`El medidor ${name} con número de serie ${serial} ha sido agregado a la bodega.`);
         }
       }
-  
-      res.status(200).json({ msg: 'Los medidores han sido agregados a la bodega.' });
+      const progressPercentage = (processedRows / totalRows) * 100;
+      res.status(200).json({ msg: 'Los medidores han sido agregados a la bodega.',progress: progressPercentage  });
     } catch (error) {
       console.error(error);
       res.status(500).json({ msg: 'Ha ocurrido un error al procesar el archivo.' });

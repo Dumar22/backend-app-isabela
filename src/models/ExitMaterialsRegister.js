@@ -1,9 +1,10 @@
 import { DataTypes } from 'sequelize';
 import db from '../config/config.js'
-import MaterialExitDetail from './MaterialExitDetails.js';
+import MaterialExitRegisterDetail from './MaterialExitRegisterDetails.js';
+import WorkInstall from './WorkInstall.js';
 import User from "./User.js";
 
-const ExitMaterial = db.define('ExitMaterial', {
+const ExitMaterialRegister = db.define('ExitMaterialRegister', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
@@ -68,11 +69,13 @@ const ExitMaterial = db.define('ExitMaterial', {
   },
   // Otros campos específicos de las salidas
 },
-  { db, modelName: 'exitMaterial' });
+  { db, modelName: 'exitMaterialRegister' });
 
-  ExitMaterial.hasMany(MaterialExitDetail, { as: 'materialExitDetail', foreignKey: 'exitMaterialId' });
-MaterialExitDetail.belongsTo(ExitMaterial, { as: 'exitMaterial', foreignKey: 'exitMaterialId' });
-User.hasMany(ExitMaterial, { as: 'exitMaterial', foreignKey: 'createdById' });
-ExitMaterial.belongsTo(User, { as: 'createdBy', foreignKey: 'createdById' });
+  ExitMaterialRegister.hasMany(MaterialExitRegisterDetail, { as: 'materialExitRegisterDetail', foreignKey: 'exitMateriaRegisterlId' });
+MaterialExitRegisterDetail.belongsTo(ExitMaterialRegister, { as: 'exitMaterial', foreignKey: 'exitMaterialRegisterId' });
+User.hasMany(ExitMaterialRegister, { as: 'exitMaterialRegister', foreignKey: 'createdById' });
+ExitMaterialRegister.belongsTo(User, { as: 'createdBy', foreignKey: 'createdById' });
+WorkInstall.belongsTo(ExitMaterialRegister, { as: 'exitMaterialRegister', foreignKey: 'exitMaterialRegisterId' });
+ExitMaterialRegister.hasMany(WorkInstall, { as: 'workInstall', foreignKey: 'exitMaterialRegisterId' });
 
-export default ExitMaterial;
+export default ExitMaterialRegister;

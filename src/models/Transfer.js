@@ -22,8 +22,8 @@ const Transfer = db.define('Transfer', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notNull: { msg: 'El número de factura es obligatorio.' },
-      notEmpty: { msg: 'El número de factura no puede ir vacío.' },
+      notNull: { msg: 'El número de trnsferencia es obligatorio.' },
+      notEmpty: { msg: 'El número de trnsferencia no puede ir vacío.' },
     },
   },
   origin: {
@@ -38,48 +38,48 @@ destination: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notNull: { msg: 'El origen es obligatorio.' },
-      notEmpty: { msg: 'El origen no puede ir vacío.' },
+      notNull: { msg: 'El destino es obligatorio.' },
+      notEmpty: { msg: 'El destino no puede ir vacío.' },
     },
   },
   autorization: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notNull: { msg: 'El nombre del proveedor es obligatorio.' },
-      notEmpty: { msg: 'El nombre del proveedor no puede ir vacío.' },
+      notNull: { msg: 'El nombre del quien autoriza es obligatorio.' },
+      notEmpty: { msg: 'El nombre del quien autoriza no puede ir vacío.' },
     },
   },
   delivery: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notNull: { msg: 'El NIT del proveedor es obligatorio.' },
-      notEmpty: { msg: 'El NIT del proveedor no puede ir vacío.' },
+      notNull: { msg: 'El nombre de quien envia es obligatorio.' },
+      notEmpty: { msg: 'El nombre de quien envia no puede ir vacío.' },
     },
   },
   documentdelivery: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notNull: { msg: 'El NIT del proveedor es obligatorio.' },
-      notEmpty: { msg: 'El NIT del proveedor no puede ir vacío.' },
+      notNull: { msg: 'El numero de quien envia es obligatorio.' },
+      notEmpty: { msg: 'El numero de quien envia no puede ir vacío.' },
     },
   },
   receive: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notNull: { msg: 'El NIT del proveedor es obligatorio.' },
-      notEmpty: { msg: 'El NIT del proveedor no puede ir vacío.' },
+      notNull: { msg: 'El nombre de quien recibe es obligatorio.' },
+      notEmpty: { msg: 'El nombre de quien recibe no puede ir vacío.' },
     },
   },
   documentreceive: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      notNull: { msg: 'El NIT del proveedor es obligatorio.' },
-      notEmpty: { msg: 'El NIT del proveedor no puede ir vacío.' },
+      notNull: { msg: 'El numero de documento de quien recibe es obligatorio.' },
+      notEmpty: { msg: 'El numero de documento de quien recibe no puede ir vacío.' },
     },
   },
   // Otros campos específicos de las salidas

@@ -101,18 +101,29 @@ const data =  {
 
 const uploadMaterials = async (req, res) => {
   try {
+    const user = req.user;
+    const verifywarehouse = req.user.warehouse;
     const file = req.file;      
     const workbook = XLSX.readFile(file.path);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
+    const totalRows = rows.length - 1; // Excluimos la fila de encabezado
+    let processedRows = 0;
+
     // Procesar los datos del archivo
     for (let i = 1; i < rows.length; i++) {
       const [name, code, unity, quantity, value, serial = '', warehouse] = rows[i];
-      const existingMaterial = await Material.findOne({ where: { name: name, code: code, warehouse: warehouse } });
-      if (existingMaterial) {
+     // console.log('datos archivo => ',name, code, unity, quantity, value, serial);
+      const existingMaterial = await Material.findOne({ where: { name: name,code: code, warehouse: verifywarehouse } });
+      //console.log('materiales exit =>:',existingMaterial);
+      if (existingMaterial) {        
         console.log(`El material ${name} con código ${code} ya existe en la bodega.`);
+        existingMaterial.quantity += quantity;
+        existingMaterial.total = existingMaterial.quantity * existingMaterial.value;
+        await existingMaterial.save();
+        console.log(`Se ha actualizado la cantidad del material ${name} con código ${code}.`);
       } else {
         const data = {
           name: name.toUpperCase(),
@@ -127,16 +138,20 @@ const uploadMaterials = async (req, res) => {
           createdAt: new Date(),
           updatedAt: new Date()
         };
-        const provider = new Material(data);
-        await provider.save();
+
+        // Emitir progreso
+      processedRows++;         
+
+        const material = new Material(data);
+        await material.save();
         console.log(`El material ${name} con código ${code} ha sido agregado a la bodega.`);
       }
     }
-
-    res.status(200).json({ message: 'Los materiales han sido agregados a la bodega.' });
+    const progressPercentage = (processedRows / totalRows) * 100;
+    res.status(200).json({ message: 'Los materiales han sido agregados a la bodega.',progress: progressPercentage });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Ha ocurrido un error al procesar el archivo.' });
+    res.status(500).json({ msg: 'Ha ocurrido un error al procesar el archivo.' });
   }
 };
 

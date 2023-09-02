@@ -63,7 +63,7 @@ const getAllTransfer = async (req, res) => {
   });
   
   if (!transfer) {
-    return res.status(404).json({ error: 'Entrada no encontrada' });
+    return res.status(404).json({ error: 'Traslado no encontrada' });
    }
    
    const createdBy = await transfer.getCreatedBy();
@@ -76,18 +76,18 @@ const getAllTransfer = async (req, res) => {
 const createTransfer = async (req, res) => {
   try {
       // Extraer datos de la solicitud
-    const { transferNumber, origin, destination, autorization,delivery, receive, materials } = req.body;
+    const { transferNumber, origin, destination, autorization,delivery, receive, materialTransferDetail } = req.body;
      
     // Validar campos obligatorios
     const validationRules = [
       check('date').notEmpty().withMessage('El campo fecha es obligatorio.- fecha'),
       check('transferNumber').notEmpty().withMessage('El campo número de transferencia es obligatorio. - número de transferencia'),
       check('origin').notEmpty().withMessage('El campo origen es obligatorio. - origen'),
-      check('destination').notEmpty().withMessage('El campo origen es obligatorio. - destino'),
-      check('autorization').notEmpty().withMessage('El campo nombre del proveedor es obligatorio. - autoriza'),
+      check('destination').notEmpty().withMessage('El campo destino es obligatorio. - destino'),
+      check('autorization').notEmpty().withMessage('El campo nombre de quie autoriza es obligatorio. - autoriza'),
       check('delivery').notEmpty().withMessage('El campo quien entrega del es obligatorio.'),
       check('receive').notEmpty().withMessage('El campo quien recibe del es obligatorio.'),
-      check('materials').isArray({ min: 1 }).withMessage('Debe haber al menos un material.')
+      check('materialTransferDetail').isArray({ min: 1 }).withMessage('Debe haber al menos un material.')
     ];
     await Promise.all(validationRules.map(validation => validation.run(req)));
 
@@ -118,11 +118,11 @@ const createTransfer = async (req, res) => {
         });    
 
    // Crear los detalles de materiales y asociarlos a la entrada
-    for (const materialDetail of materials) {
+    for (const materialDetail of materialTransferDetail) {
       const { code, name, quantity, unity, serial = '', value } = materialDetail;
 
       // Crear el detalle de material
-      const materialEntryDetail = await MaterialTransferDetail.create({
+      const materialTransferDetail = await MaterialTransferDetail.create({
         code,
         name: name.toUpperCase(),
         unity,
@@ -153,11 +153,11 @@ const createTransfer = async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: 'Entrada de materiales creada exitosamente.' });
+    res.status(201).json({ message: 'Transferencia de materiales creada exitosamente.' });
    
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ error: 'No se pudo crear la entrada de materiales.' });
+    return res.status(500).json({ error: 'No se pudo crear la Trnasferencia de materiales.' });
   }
 };
 
@@ -165,7 +165,7 @@ const createTransfer = async (req, res) => {
 const putTransfer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { origin, destination, autorization,receive,delivery, materials } = req.body;
+    const { origin, destination, autorization,receive,delivery, materialTransferDetail } = req.body;
 
     const transfer = await Transfer.findByPk(id);
 
@@ -180,7 +180,7 @@ const putTransfer = async (req, res) => {
     await check('autorization').notEmpty().withMessage('El Campo no puede ir vacio - autoriza').run(req)
     await check('delivery').notEmpty().withMessage('El Campo no puede ir vacio -envia').run(req)
     await check('receive').notEmpty().withMessage('El Campo no puede ir vacio -envia').run(req)
-    await check('materials').isArray({ min: 1 }).withMessage('Debe haber al menos un material.').run(req)
+    await check('materialTransferDetail').isArray({ min: 1 }).withMessage('Debe haber al menos un material.').run(req)
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -189,7 +189,7 @@ const putTransfer = async (req, res) => {
     // Obtener el objeto de usuario autenticado a partir del middleware validateJWT
     const user = req.user;
      // Actualizar la entrada de materiales
-     await entry.update({
+     await transfer.update({
         ...req.body,   
         origin: origin.toUpperCase(),
           destination: destination.toUpperCase(),
@@ -200,19 +200,19 @@ const putTransfer = async (req, res) => {
       });
 
     // Actualizar los detalles de materiales asociados a la entrada
-    for (const materialDetail of materials) {
-        const { id: materialEntryDetailId, code, name, unity, quantity, serial = '', value } = materialDetail;
+    for (const materialDetail of materialTransferDetail) {
+        const { id: materialTransferDetailId, code, name, unity, quantity, serial = '', value } = materialDetail;
   
-        if (materialEntryDetailId) {
+        if (materialTransferDetailId) {
           // Si el detalle de material ya existe, actualizarlo
-          const materialEntryDetail = await MaterialTransferDetail.findByPk(materialEntryDetailId);
+          const materialTransferDetail = await MaterialTransferDetail.findByPk(materialTransferDetailId);
   
-          if (!materialEntryDetail) {
-            console.log(`El detalle de material con ID ${materialEntryDetailId} no existe.`);
+          if (!materialTransferDetail) {
+            console.log(`El detalle de material con ID ${materialTransferDetailId} no existe.`);
             continue;
           }
           // Actualizar el detalle de material
-          await materialEntryDetail.update({
+          await materialTransferDetail.update({
             code,
             name: name.toUpperCase(),
             unity,            
@@ -225,7 +225,7 @@ const putTransfer = async (req, res) => {
           // Actualizar la cantidad y el valor del material en la tabla de materiales
           const [updatedRows] = await Material.update(
             {
-              quantity: Material.sequelize.literal(`quantity - ${materialEntryDetail.previous('quantity')} + ${quantity}`),
+              quantity: Material.sequelize.literal(`quantity - ${materialTransferDetail.previous('quantity')} + ${quantity}`),
               value
             },
             {
@@ -240,7 +240,7 @@ const putTransfer = async (req, res) => {
           }
         } else {
           // Si el detalle de material no existe, crearlo y asociarlo a la entrada
-          const materialEntryDetail = await MaterialTransferDetail.create({
+          const materialTransferDetail = await MaterialTransferDetail.create({
             code,
             name: name.toUpperCase(),
             unity,            
@@ -254,7 +254,7 @@ const putTransfer = async (req, res) => {
           // Actualizar la cantidad y el valor del material en la tabla de materiales
           const [updatedRows] = await Material.update(
             {
-              quantity: Material.sequelize.literal(`quantity + ${quantity}`),
+              quantity: Material.sequelize.literal(`quantity - ${quantity}`),
               value
             },
             {
