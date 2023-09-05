@@ -105,6 +105,33 @@ const createTransfer = async (req, res) => {
       });
     }
 
+    // Verificar si hay suficiente cantidad de materiales y medidores disponibles para dar salida
+    for (const detail of materialTransferDetail) {
+      const { code } = detail;
+      console.log(code);
+      if (code.startsWith('MED')) {
+        const existingMeter = await Meter.findOne({ where: { code } });
+        if (!existingMeter) {
+          throw new Error(`No existe un medidor con el código ${code}.`);
+        }
+        if (existingMeter.quantity < detail.quantity) {
+          throw new Error(`No hay suficientes medidores con el código ${code} para dar salida.`);
+        }
+        existingMeter.quantity -= detail.quantity;
+        await existingMeter.save();
+      } else {
+        const existingMaterial = await Material.findOne({ where: { code } });
+        if (!existingMaterial) {
+          throw new Error(`No existe un material con el código ${code}.`);
+        }
+        if (existingMaterial.quantity < detail.quantity) {
+          return res.status(400).json({ msg: `No hay suficientes materiales con el código ${code} para dar salida.`});
+        }
+        existingMaterial.quantity -= detail.quantity;
+        await existingMaterial.save();
+      }
+    }
+
     // Crear objeto de factura
     const user = req.user;
     const transfer = await Transfer.create({
@@ -172,6 +199,33 @@ const putTransfer = async (req, res) => {
     if (!transfer) {  //validar si el traslado existe
       return res.status(404).json({ error: 'Traslado no encontrado o no existe.' });
     }
+
+      // Verificar si hay suficiente cantidad de materiales y medidores disponibles para dar salida
+      for (const detail of materialTransferDetail) {
+        const { code } = detail;
+        //console.log(code);
+        if (code.startsWith('MED')) {
+          const existingMeter = await Meter.findOne({ where: { code } });
+          if (!existingMeter) {
+            throw new Error(`No existe un medidor con el código ${code}.`);
+          }
+          if (existingMeter.quantity < detail.quantity) {
+            throw new Error(`No hay suficientes medidores con el código ${code} para dar salida.`);
+          }
+          existingMeter.quantity -= detail.quantity;
+          await existingMeter.save();
+        } else {
+          const existingMaterial = await Material.findOne({ where: { code } });
+          if (!existingMaterial) {
+            throw new Error(`No existe un material con el código ${code}.`);
+          }
+          if (existingMaterial.quantity < detail.quantity) {
+            return res.status(400).json({ msg: `No hay suficientes materiales con el código ${code} para dar salida.`});
+          }
+          existingMaterial.quantity -= detail.quantity;
+          await existingMaterial.save();
+        }
+      }
 
     await check('date').notEmpty().withMessage('El Campo no puede ir vacio - fecha').run(req)
     await check('transferNumber').notEmpty().withMessage('El Campo no puede ir vacio - numero transferencia').run(req)
@@ -248,7 +302,7 @@ const putTransfer = async (req, res) => {
             value,
             serial,
             total: quantity * value,
-            entryId: entry.id
+            id: materialTransferDetailId,
           });
   
           // Actualizar la cantidad y el valor del material en la tabla de materiales

@@ -1,7 +1,8 @@
 import { check, validationResult } from 'express-validator'
 
-import ExitMaterial from "../models/ExitMaterials.js";
-import MaterialExitDetail from "../models/MaterialExitDetails.js";
+import ExitMaterialRegister from "../models/ExitMaterialsRegister.js";
+import MaterialExitRegisterDetail from "../models/MaterialExitRegisterDetails.js";
+import WorkInstall from "../models/WorkInstall.js";
 import Material from "../models/Material.js";
 import Meter from "../models/Meter.js";
 import User from '../models/User.js';
@@ -12,24 +13,21 @@ const getExit = async (req, res) => {
   try {
     const user = req.user;
     
-    const exit = await ExitMaterial.findAll({
-      where: { createdById: user.id },
-      include: [{ model: MaterialExitDetail, as: 'materialExitDetail' },
-      { model: User, attributes: ['name'], as: 'createdBy' } ]
-    });
-     
+    const exit = await ExitMaterialRegister.findAll({
+      where: { createdById: user.id }, 
+     include: [{ model: MaterialExitRegisterDetail, as: 'materialExitRegisterDetail' },
+      { model: User, attributes: ['name'], as: 'createdBy' },
+      { model: WorkInstall, as: 'workInstall' } ]
+    });     
      // Verificar que el usuario tenga permiso para ver la factura
-     const exitAuth = exit.filter(exit=> exit.createdById === user.id);
-    
+     const exitAuth = exit.filter(exit=> exit.createdById === user.id);    
   
-    const count = await ExitMaterial.count(
+    const count = await ExitMaterialRegister.count(
       {
         where: { createdById: user.id }
       }
-    );
-    
-    res.json( {count, exitAuth} );
-    
+    );    
+    res.json( {count, exitAuth} );    
   } catch (error) {
     console.log(error);
     res.status(500).json({
@@ -44,10 +42,10 @@ const getExit = async (req, res) => {
 
 const getAllExit = async (req, res) => {
   try {
-    const exit = await ExitMaterial.findAll({
+    const exit = await ExitMaterialRegister.findAll({
       include: [MaterialExitDetail, { model: User, as: 'createdBy' }]
     });
-    const totalExit = await ExitMaterial.count();
+    const totalExit = await ExitMaterialRegister.count();
     res.json({ entry, totalExit });
   } catch (error) {
     console.error(error);
@@ -59,8 +57,10 @@ const getAllExit = async (req, res) => {
 
    const { id } = req.params;
    
-  const exit = await ExitMaterial.findByPk(id, {
-    include: [{ model: MaterialExitDetail, as: 'materialExitDetail' } ]
+  const exit = await ExitMaterialRegister.findByPk(id, {
+    include: [{ model: MaterialExitRegisterDetail, as: 'materialExitRegisterDetail' },
+    { model: User, attributes: ['name'], as: 'createdBy' },
+    { model: WorkInstall, as: 'workInstall' } ]
   });
   
   if (!exit) {
@@ -76,7 +76,7 @@ const getAllExit = async (req, res) => {
 
 const createExit = async (req, res) => {
   try {
-    const { date, exitNumber, collaboratorCode, collaboratorName, collaboratorDocument, collaboratorOperation, materialExitDetail } = req.body;
+    const { date, exitNumber, collaboratorCode, collaboratorName, collaboratorDocument, collaboratorOperation, materialExitRegisterDetail, workInstallId } = req.body;
 
     const user = req.user
 
@@ -88,7 +88,8 @@ const createExit = async (req, res) => {
       { field: 'collaboratorName', message: 'El campo nombre del colaborador es obligatorio.' },
       { field: 'collaboratorDocument', message: 'El campo documento del colaborador es obligatorio.' },
       { field: 'collaboratorOperation', message: 'El campo operación del colaborador es obligatorio.' },
-      { field: 'materialExitDetail', message: 'Debe haber al menos un detalle.', isArray: true, minArrayLength: 1 }
+      { field: 'workInstallId', message: 'Debe haber una matricula válida.' },
+      { field: 'materialExitRegisterDetail', message: 'Debe haber al menos un material.', isArray: true, minArrayLength: 1 }
     ];
 
     for (const rule of validationRules) {
@@ -104,15 +105,33 @@ const createExit = async (req, res) => {
     }
 
     // Verificar si la factura ya existe
-    const existExitNumber = await ExitMaterial.findOne({ where: { exitNumber } });
+    const existExitNumber = await ExitMaterialRegister.findOne({ where: { exitNumber } });
     if (existExitNumber) {
       return res.status(400).json({
         msg: `La salida de salida ${exitNumber} ya existe, ingrese una diferente.`
       });
     }
 
+    const workInstall = await WorkInstall.findByPk(workInstallId);
+if (!workInstall) {
+  return res.status(404).json({
+    msg: 'La matrícula u orden de trabajo de trabajo no existe.'
+  });
+}
+
+// Verificar si ya existe una salida de material para la misma matrícula u orden de trabajo
+const existingExit = await ExitMaterialRegister.findOne({
+  where: { workInstallId }
+});
+if (existingExit) {
+  return res.status(400).json({
+    msg: 'Ya existe una salida de material asociada a esta matrícula u orden de trabajo.'
+  });
+}
+
+
     // Verificar si hay suficiente cantidad de materiales y medidores disponibles para dar salida
-    for (const detail of materialExitDetail) {
+    for (const detail of materialExitRegisterDetail) {
       const { code } = detail;
       if (code.startsWith('MED')) {
         const existingMeter = await Meter.findOne({ where: { code } });
@@ -138,35 +157,24 @@ const createExit = async (req, res) => {
     }
 
     // // Crear la factura de salida
-    const exitMaterial = await ExitMaterial.create({
-      date,
-      exitNumber,
-      collaboratorCode,
-      collaboratorName,
-      collaboratorDocument,
-      collaboratorOperation,
+    const exitMaterial = await ExitMaterialRegister.create({
+      ...req.body,
+      workInstallId: workInstall.id,
       warehouse: user.warehouse,      
       createdById: user.id 
     });
 
 
 // Agregar los detalles de los materiales a la factura de salida
-for (const detail of materialExitDetail) {
+for (const detail of materialExitRegisterDetail) {
   const { name, code, unity, note, quantity, restore = 0, serial ='', value, obs = ''} = detail;
   
   // Crear el detalle de material
-  const materialExitDetail = await MaterialExitDetail.create({
-    name,
-    code,
-    unity,
-    note,
-    quantity,
-    restore,
-    serial,
-    value,
+  const materialExitRegisterDetail = await MaterialExitRegisterDetail.create({
+    ...detail,
     total: quantity * value,
     obs,
-    exitMaterialId: exitMaterial.id
+    exitMaterialRegisterId: exitMaterial.id
   });
 
   // Actualizar el material correspondiente
@@ -183,70 +191,150 @@ for (const detail of materialExitDetail) {
 }
 
 return res.status(200).json({
-  msg: 'Factura de salida creada exitosamente.'
+  msg: 'Salida creada exitosamente.',
+  exitMaterial
 });
   } catch (error) {
     res.status(400).json({ msg: error.message });
   }
-};
-
-  
+};  
   
 const putExit = async (req, res) => {
   try {
-    const { date, exitNumber, collaboratorCode, collaboratorName, collaboratorDocument, collaboratorOperation, materialExitDetail } = req.body;
+
+    const { materialExitRegisterDetail, workInstallId } = req.body;
+    console.log(req.body);
     const { id } = req.params;
+    const user = req.user;
+
+    // Verificar si la salida de material existe
+    const exitMaterial = await ExitMaterialRegister.findByPk(id);
+    if (!exitMaterial) {
+      return res.status(404).json({
+        msg: 'La salida de material no existe.'
+      });
+    }
 
     // Validar campos obligatorios
-    const requiredFields = ['date', 'exitNumber', 'collaboratorCode', 'collaboratorName', 'collaboratorDocument', 'collaboratorOperation', 'materialExitDetail'];
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        throw new Error(`El campo ${field} es obligatorio.`);
+    const validationRules = [
+      { field: 'date', message: 'El campo fecha es obligatorio.' },
+      { field: 'exitNumber', message: 'El campo número de factura es obligatorio.' },
+      { field: 'collaboratorCode', message: 'El campo código del colaborador es obligatorio.' },
+      { field: 'collaboratorName', message: 'El campo nombre del colaborador es obligatorio.' },
+      { field: 'collaboratorDocument', message: 'El campo documento del colaborador es obligatorio.' },
+      { field: 'collaboratorOperation', message: 'El campo operación del colaborador es obligatorio.' },
+      { field: 'workInstallId', message: 'Debe haber una matricula válida.' },
+      { field: 'materialExitRegisterDetail', message: 'Debe haber al menos un material.', isArray: true, minArrayLength: 1 }
+    ];
+
+    for (const rule of validationRules) {
+      const { field, message, isArray = false, minArrayLength = null } = rule;
+      const value = req.body[field];
+      if (isArray) {
+        if (!Array.isArray(value) || (minArrayLength !== null && value.length < minArrayLength)) {
+          return res.status(400).json({
+           message
+          });
+        }
+      } else if (!value) {
+        return res.status(400).json({
+          message
+         });
+      }
+    }
+    
+    const workInstall = await WorkInstall.findByPk(workInstallId);
+    if (!workInstall) {
+      return res.status(404).json({
+        msg: 'La matrícula u orden de trabajo de trabajo no existe.'
+      });
+    }
+
+    // Verificar si ya existe una salida de material para la misma matrícula u orden de trabajo
+    const existingExit = await ExitMaterialRegister.findOne({
+      where: { workInstallId },
+      attributes: ['id'],
+      raw: true
+    });
+    if (existingExit && existingExit.id !== id) {
+      return res.status(400).json({
+        msg: 'Ya existe una salida de material asociada a esta matrícula u orden de trabajo.'
+      });
+    }
+
+    // Verificar si hay suficiente cantidad de materiales y medidores disponibles para dar salida
+    for (const detail of materialExitRegisterDetail) {
+      const { code } = detail;
+      if (code.startsWith('MED')) {
+        const existingMeter = await Meter.findOne({ where: { code } });
+        if (!existingMeter) {
+          throw new Error(`No existe un medidor con el código ${code}.`);
+        }
+        if (existingMeter.quantity < detail.quantity) {
+          throw new Error(`No hay suficientes medidores con el código ${code} para dar salida.`);
+        }
+        existingMeter.quantity -= detail.quantity;
+        await existingMeter.save();
+      } else {
+        const existingMaterial = await Material.findOne({ where: { code } });
+        if (!existingMaterial) {
+          throw new Error(`No existe un material con el código ${code}.`);
+        }
+        if (existingMaterial.quantity < detail.quantity) {
+          
+          return res.status(400).json({
+            msg: `No hay suficientes materiales con el código ${code} para dar salida.`
+           });
+        }
+        existingMaterial.quantity -= detail.quantity;
+        await existingMaterial.save();
       }
     }
 
-    // Verificar si la factura existe
-    const exitMaterial = await ExitMaterial.findOne({ where: { id } });
-    if (!exitMaterial) {
-      return res.status(404).json({
-        msg: 'La factura de salida no existe.'
-      });
-    }
+    // Actualizar la salida de material
+    await exitMaterial.update({
+      ...req.body,
+      workInstallId: workInstall.id,
+      warehouse: user.warehouse,
+      updatedById: user.id
+    });
 
-    // Actualizar los campos de la factura de salida
-    exitMaterial.date = date;
-    exitMaterial.exitNumber = exitNumber;
-    exitMaterial.collaboratorCode = collaboratorCode;
-    exitMaterial.collaboratorName = collaboratorName;
-    exitMaterial.collaboratorDocument = collaboratorDocument;
-    exitMaterial.collaboratorOperation = collaboratorOperation;
-    await exitMaterial.save();
-
-    // Actualizar los detalles de los materiales asociados a la factura de salida
-    await MaterialExitDetail.destroy({ where: { exitMaterialId: id } });
-    for (const detail of materialExitDetail) {
-      const { name, code, unity, note, quantity, restore, serial, value } = detail;
-      await MaterialExitDetail.create({
-        name,
-        code,
-        unity,
-        note,
-        quantity,
-        restore,
-        serial,
-        value,
-        exitMaterialId: id
-      });
+      
+     // Actualizar los detalles de materiales
+     // Actualizar los detalles de materiales
+for (const detail of req.body.materialExitRegisterDetail) {
+  const existingDetail = detail.id
+  ? await MaterialExitRegisterDetail.findOne({ where: { id: detail.id } })
+  : null;
+  
+  if (existingDetail) {
+    // Actualizar el detalle existente
+    existingDetail.name = detail.name;
+    existingDetail.code = detail.code;
+    existingDetail.unity = detail.unity;
+    existingDetail.note = detail.note;
+    existingDetail.quantity = detail.quantity;
+    await existingDetail.save();
+  } else {
+    // Agregar un nuevo detalle
+    const { quantity, value, obs } = detail;
+    const material = await Material.findOne({ where: { code: detail.code } });
+    const materialExitRegisterDetail = await MaterialExitRegisterDetail.create({
+      ...detail,
+      total: quantity * value,
+      obs,
+      exitMaterialRegisterId: exitMaterial.id,
+      materialId: material.id
+    });
+      }
     }
 
     return res.status(200).json({
-      msg: 'Factura de salida actualizada exitosamente.'
+      msg: 'Salida actualizada exitosamente.'
     });
   } catch (error) {
-    return res.status(500).json({
-      msg: 'Ocurrió un error al actualizar la factura de salida.',
-      error: error.message
-    });
+    console.log(error);
+    res.status(400).json({ msg: error.message });
   }
 };
 
@@ -255,13 +343,13 @@ const deleteExit = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const exit = await ExitMaterial.findByPk(id);
+    const exit = await ExitMaterialRegister.findByPk(id);
 
     if (!exit) {
       return res.status(404).json({ error: 'Entrada no encontrada' });
     }
     
-    await MaterialExitDetail.destroy({
+    await MaterialExitRegisterDetail.destroy({
       where: { id: id }
     });
 

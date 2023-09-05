@@ -213,6 +213,32 @@ const putExit = async (req, res) => {
         msg: 'La factura de salida no existe.'
       });
     }
+ // Verificar si hay suficiente cantidad de materiales y medidores disponibles para dar salida
+ for (const detail of materialExitDetail) {
+  const { code } = detail;
+  console.log(code);
+  if (code.startsWith('MED')) {
+    const existingMeter = await Meter.findOne({ where: { code } });
+    if (!existingMeter) {
+      throw new Error(`No existe un medidor con el código ${code}.`);
+    }
+    if (existingMeter.quantity < detail.quantity) {
+      throw new Error(`No hay suficientes medidores con el código ${code} para dar salida.`);
+    }
+    existingMeter.quantity -= detail.quantity;
+    await existingMeter.save();
+  } else {
+    const existingMaterial = await Material.findOne({ where: { code } });
+    if (!existingMaterial) {
+      throw new Error(`No existe un material con el código ${code}.`);
+    }
+    if (existingMaterial.quantity < detail.quantity) {
+      throw new Error(`No hay suficientes materiales con el código ${code} para dar salida.`);
+    }
+    existingMaterial.quantity -= detail.quantity;
+    await existingMaterial.save();
+  }
+}
 
     // Actualizar los campos de la factura de salida
     exitMaterial.date = date;

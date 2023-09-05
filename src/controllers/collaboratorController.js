@@ -121,31 +121,31 @@ const uploadCollaborator = async (req, res) => {
 
     // Procesar los datos del archivo
     for (let i = 1; i < rows.length; i++) {
-      const [ code, name,operation, document, warehouse ] = rows[i];
-      const existingCollaborator = await Collaborator.findOne({ where: { name: name, code: code, warehouse: warehouse } });
+      const [ code, name, operation, document, warehouse ] = rows[i];
+      const existingCollaborator = await Collaborator.findOne({ where: { name: name, code: code, document: document, warehouse: warehouse } });
       if (existingCollaborator) {
-        console.log(`El colaborardor ${name} con código ${code} ya existe en la bodega.`);
+        console.log(`El colaborador ${name} con código ${code} y número de documento ${document} ya existe en la bodega.`);
+        continue; // Omite la iteración actual y pasa a la siguiente fila
       } else {
         const data = {
           code,
           name: name.toUpperCase(),
           operation,
-          document,    
-          warehouse:req.user.warehouse,          
+          document,
+          warehouse: req.user.warehouse,
           user: req.user.id,
           createdAt: new Date(),
           updatedAt: new Date()
         };
-        const provider = new Collaborator(data);
-        await provider.save();
-       
+        const collaborator = new Collaborator(data);
+        await collaborator.save();
       }
     }
 
-    res.status(200).json({ message: 'Los colaboradores han sido agregados a la bodega.' });
+    res.status(200).json({ msg: 'Los colaboradores han sido agregados a la bodega.' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Ha ocurrido un error al procesar el archivo.' });
+    //console.error(error);
+    res.status(500).json({ msg: 'Ha ocurrido un error al procesar el archivo.' });
   }
 };
 

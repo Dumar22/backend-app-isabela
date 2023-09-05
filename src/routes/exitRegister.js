@@ -1,6 +1,6 @@
 import express from "express";
 import validateJWT from "../middlewares/validateJWT.js";
-import { createExit, deleteExit, getExitById,getExit, getAllExit, putExit } from '../controllers/exitController.js';
+import { createExit, deleteExit, getExitById,getExit, getAllExit, putExit } from '../controllers/exitRegisterController.js';
 
 const router = express.Router();
 

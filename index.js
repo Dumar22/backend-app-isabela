@@ -13,6 +13,7 @@ import MeterRoutes from './src/routes/meterRoutes.js';
 import TransferRoutes from './src/routes/transferRoutes.js';
 import ExitRoutes from './src/routes/exitRoutes.js';
 import WorkInstall from './src/routes/workInstallRoutes.js';
+import ExitRegister from './src/routes/exitRegister.js';
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api', MeterRoutes);
 app.use('/api', TransferRoutes);
 app.use('/api', ExitRoutes);
 app.use('/api', WorkInstall);
+app.use('/api', ExitRegister);
 
 //Conexión con Base de Datos
 

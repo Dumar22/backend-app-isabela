@@ -8,6 +8,7 @@ const MaterialExitRegisterDetail = db.define('MaterialExitRegisterDetail', {
     defaultValue: DataTypes.UUIDV4,
     allowNull: false,
     primaryKey: true,
+    unique: true,
   },
   name: {
     type: DataTypes.STRING,

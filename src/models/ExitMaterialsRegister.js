@@ -10,6 +10,7 @@ const ExitMaterialRegister = db.define('ExitMaterialRegister', {
     defaultValue: DataTypes.UUIDV4,
     allowNull: false,
     primaryKey: true,
+    unique: true,
   },
   date: {
     type: DataTypes.DATEONLY,
@@ -18,6 +19,10 @@ const ExitMaterialRegister = db.define('ExitMaterialRegister', {
       notNull: { msg: 'La fecha es obligatoria.' },
       isDate: { msg: 'La fecha no es una fecha válida.' },
     },
+  },
+  type: {
+    type: DataTypes.STRING,
+    allowNull: false,    
   },
   exitNumber: {
     type: DataTypes.STRING,
@@ -71,11 +76,17 @@ const ExitMaterialRegister = db.define('ExitMaterialRegister', {
 },
   { db, modelName: 'exitMaterialRegister' });
 
-  ExitMaterialRegister.hasMany(MaterialExitRegisterDetail, { as: 'materialExitRegisterDetail', foreignKey: 'exitMateriaRegisterlId' });
-MaterialExitRegisterDetail.belongsTo(ExitMaterialRegister, { as: 'exitMaterial', foreignKey: 'exitMaterialRegisterId' });
+  ExitMaterialRegister.hasMany(MaterialExitRegisterDetail, { as: 'materialExitRegisterDetail', foreignKey: 'exitMaterialRegisterId' });
+
+  MaterialExitRegisterDetail.belongsTo(ExitMaterialRegister, { as: 'exitMaterialRegister', foreignKey: 'exitMaterialRegisterId' });
+
 User.hasMany(ExitMaterialRegister, { as: 'exitMaterialRegister', foreignKey: 'createdById' });
+
 ExitMaterialRegister.belongsTo(User, { as: 'createdBy', foreignKey: 'createdById' });
-WorkInstall.belongsTo(ExitMaterialRegister, { as: 'exitMaterialRegister', foreignKey: 'exitMaterialRegisterId' });
-ExitMaterialRegister.hasMany(WorkInstall, { as: 'workInstall', foreignKey: 'exitMaterialRegisterId' });
+
+WorkInstall.hasMany(ExitMaterialRegister, { as: 'exitMaterialRegister', foreignKey: 'workInstallId' });
+
+ExitMaterialRegister.belongsTo(WorkInstall, { as: 'workInstall', foreignKey: 'workInstallId' });
+
 
 export default ExitMaterialRegister;

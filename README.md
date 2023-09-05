@@ -69,7 +69,7 @@ If you want to contribute to the project contact me:
 Mail: dumarfonseka@hotmail.com
 
 Licence
-does not require.
+This project is under the MIT License (or Apache, as applicable). See the LICENSE file for more information.
 
 Author
 Dumar Fonseca

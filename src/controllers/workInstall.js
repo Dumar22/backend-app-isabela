@@ -128,7 +128,7 @@ const putWorkInstall = async( req, res) => {
       const workInstall = await WorkInstall.findByPk( id );
       if ( !workInstall ) {
           return res.status(404).json({
-              msg: 'No existe un Proveedor con el nombre ' + id
+              msg: 'No existe una Matricula ' + id
           });
     }
       
@@ -142,7 +142,7 @@ const putWorkInstall = async( req, res) => {
      await workInstall.update( data );
 
     res.status(200).json({
-      msg: 'Proveedor Actualizado con exito',
+      msg: 'Matricula Actualizada con exito',
       WorkInstall
     })
 
