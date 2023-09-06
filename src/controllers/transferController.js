@@ -4,6 +4,7 @@ import Transfer from "../models/Transfer.js";
 import MaterialTransferDetail from "../models/MaterialTransferDetail.js";
 import Material from "../models/Material.js";
 import User from '../models/User.js';
+import { generateTransferPDF } from '../middlewares/generateTransferPDF.js';
 
 const getTransfer = async (req, res) => {
    
@@ -356,6 +357,39 @@ const deleteTransfer = async (req, res) => {
   }
 };
 
+const dowloadPdf = async (req, res) => {
+  try {
+    // Obtener factura por ID
+    const { id } = req.params;
+   
+    const transfer = await Transfer.findByPk(id, {
+      include: [{ model: MaterialTransferDetail, as: 'materialTransferDetail' } ]
+    });
+    
+    if (!transfer) {
+      return res.status(404).json({ error: 'Traslado no encontrado' });
+    }
+
+    // Generar PDF de factura
+    const result = await generateTransferPDF(transfer);
+
+    // Enviar PDF en respuesta
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename=${transfer.transferNumber}.pdf`);
+    res.sendFile(result.pdfPath, err => {
+      if (err) return res.status(500).json({error: err}); 
+    });
+    // res.setHeader('Content-Type', 'application/pdf');
+    // res.setHeader('Content-Disposition', `attachment; filename=${invoice.invoiceNumber}.pdf`);
+    // res.send(pdfContent);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al descargar el pdf' });
+  }
+};
+
 
 export {
   createTransfer,
@@ -364,5 +398,6 @@ export {
   getTransfer,
   getTransferById,
   putTransfer,
+  dowloadPdf
 
 }
